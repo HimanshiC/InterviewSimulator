@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Interview Assistant</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        .section {
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+        }
+        textarea {
+            width: 100%;
+            min-height: 100px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            resize: vertical;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-right: 10px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        button.secondary {
+            background-color: #2196F3;
+        }
+        button.secondary:hover {
+            background-color: #1976D2;
+        }
+        .response-area {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #f9f9f9;
+            border-radius: 4px;
+            min-height: 50px;
+        }
+        .voice-button {
+            background-color: #ff4444;
+        }
+        .voice-button:hover {
+            background-color: #cc0000;
+        }
+        .status {
+            margin-top: 10px;
+            color: #666;
+        }
+        .stealth-mode {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 10px;
+            background: rgba(0,0,0,0.8);
+            color: white;
+            border-radius: 5px;
+            z-index: 1000;
+        }
+        .stealth-mode.active {
+            opacity: 0.1;
+            transition: opacity 0.3s;
+        }
+        .stealth-mode.active:hover {
+            opacity: 1;
+        }
+        .recording-indicator {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            background-color: red;
+            border-radius: 50%;
+            margin-right: 5px;
+            animation: blink 1s infinite;
+        }
+        @keyframes blink {
+            50% { opacity: 0; }
+        }
+    </style>
+</head>
+<body>
+    <div id="stealthToggle" class="stealth-mode">
+        <label>
+            <input type="checkbox" onchange="toggleStealth(this.checked)">
+            Stealth Mode
+        </label>
+    </div>
+    <div class="container">
+        <h1>Interview Assistant</h1>
+        
+        <!-- Context Upload Section -->
+        <div class="section">
+            <h2>Upload Context</h2>
+            <div class="form-group">
+                <label for="resume">Resume:</label>
+                <textarea id="resume" placeholder="Paste your resume here"></textarea>
+            </div>
+            
+            <div class="form-group">
+                <label for="jobDescription">Job Description:</label>
+                <textarea id="jobDescription" placeholder="Paste the job description here"></textarea>
+            </div>
+            
+            <button onclick="uploadContext()">Save Context</button>
+            <button class="secondary" onclick="generateIntroduction()">Generate Introduction</button>
+            <div id="introductionResponse" class="response-area"></div>
+        </div>
+        
+        <!-- Interview Question Section -->
+        <div class="section">
+            <h2>Interview Questions</h2>
+            <div class="form-group">
+                <label for="question">Question:</label>
+                <textarea id="question" placeholder="Type or speak your question"></textarea>
+            </div>
+            
+            <button onclick="sendQuestion()">Get Answer</button>
+            <button class="voice-button" onclick="startListening()">
+                🎤 Voice Input
+            </button>
+            
+            <div id="status" class="status"></div>
+            <div id="response" class="response-area"></div>
+        </div>
+        <div class="form-group">
+            <label for="question1">follow up Question:</label>
+            <textarea id="question1" placeholder="Type or speak your question"></textarea>
+        </div>
+        
+        <button onclick="sendFollowupQuestion()">Get Answer</button>
+        <button class="voice-button" onclick="startListening()">
+            🎤 Voice Input
+        </button>
+        
+        <div id="status" class="status"></div>
+        <div id="response1" class="response-area"></div>
+    </div>
+    </div>
+
+    <script>
+    async function uploadContext() {
+        try {
+            const resume = document.getElementById('resume').value;
+            const jobDescription = document.getElementById('jobDescription').value;
+            
+            if (!resume || !jobDescription) {
+                alert('Please fill in both resume and job description');
+                return;
+            }
+            
+            const response = await fetch('http://localhost:5000/upload_context', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    resume: resume,
+                    jobDescription: jobDescription
+                })
+            });
+            
+            const data = await response.json();
+            alert('Context saved successfully!');
+        } catch (error) {
+            console.error('Error:', error);
+            alert('Error saving context: ' + error.message);
+        }
+    }
+
+    async function generateIntroduction() {
+        try {
+            document.getElementById('introductionResponse').textContent = 'Generating introduction...';
+            
+            const response = await fetch('http://localhost:5000/generate_introduction', {
+                method: 'POST'
+            });
+            
+            const data = await response.json();
+            document.getElementById('introductionResponse').textContent = data.introduction;
+        } catch (error) {
+            console.error('Error:', error);
+            document.getElementById('introductionResponse').textContent = 'Error: ' + error.message;
+        }
+    }
+
+    async function sendQuestion() {
+        try {
+            const question = document.getElementById('question').value;
+            if (!question.trim()) {
+                alert('Please enter a question');
+                return;
+            }
+            
+            document.getElementById('response').textContent = 'Generating response...';
+            
+            const response = await fetch('http://localhost:5000/generate_response', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ question: question })
+            });
+            
+            const data = await response.json();
+            document.getElementById('response').textContent = data.response;
+        } catch (error) {
+            console.error('Error:', error);
+            document.getElementById('response').textContent = 'Error: ' + error.message;
+        }
+    }
+    async function sendFollowupQuestion() {
+        try {
+            const question1 = document.getElementById('question1').value;
+            if (!question1.trim()) {
+                alert('Please enter the followup question');
+                return;
+            }
+            
+            document.getElementById('response1').textContent = 'Generating response...';
+            
+            const response = await fetch('http://localhost:5000/generate_followup', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ question: question1 })
+            });
+            
+            const data = await response.json();
+            document.getElementById('response1').textContent = data.response;
+        } catch (error) {
+            console.error('Error:', error);
+            document.getElementById('response1').textContent = 'Error: ' + error.message;
+        }
+    }
+
+    async function startListening() {
+        try {
+            document.getElementById('status').textContent = 'Listening...';
+            
+            const response = await fetch('http://localhost:5000/start_listening', {
+                method: 'POST'
+            });
+            
+            const data = await response.json();
+            //document.getElementById('question').value = data.text;
+            document.getElementById('question').value = data.text || '';
+            document.getElementById('response').textContent = data.response || 'No response from Gemini.';
+        
+        
+            document.getElementById('status').textContent = 'Voice input received!';
+            //if (data.text && data.text.trim()) {
+            //sendQuestion();
+//}
+        } catch (error) {
+            console.error('Error:', error);
+            document.getElementById('status').textContent = 'Error: ' + error.message;
+        }
+    }
+
+    async function toggleStealth(enabled) {
+        try {
+            const response = await fetch('http://localhost:5000/toggle_stealth', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ enabled })
+            });
+            
+            const data = await response.json();
+            document.body.classList.toggle('stealth-mode-active', enabled);
+            
+            // Handle screen sharing detection
+            if (enabled) {
+                detectScreenSharing();
+            }
+        } catch (error) {
+            console.error('Error:', error);
+        }
+    }
+    
+    async function detectScreenSharing() {
+        try {
+            const stream = await navigator.mediaDevices.getDisplayMedia({ video: true });
+            stream.getTracks().forEach(track => track.stop());
+            // Screen sharing detected, activate complete stealth
+            document.body.classList.add('stealth-mode-active');
+        } catch (err) {
+            // User cancelled screen sharing prompt
+            console.log('Screen sharing detection cancelled');
+        }
+    }
+    
+    </script>
+</body>
+</html>

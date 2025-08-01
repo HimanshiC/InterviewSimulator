@@ -1,0 +1,14 @@
+fastapi
+uvicorn
+python-multipart
+openai
+python-dotenv
+SpeechRecognition
+websockets
+flask
+flask-cors
+google-generativeai
+sounddevice
+numpy
+python-dotenv
+SpeechRecognition
