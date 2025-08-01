@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interview Assistant</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h1>Interview Assistant</h1>
+        
+        <div class="setup-section">
+            <h2>Setup</h2>
+            <div class="input-group">
+                <label for="resume">Resume:</label>
+                <textarea id="resume" rows="5" placeholder="Paste your resume here..."></textarea>
+            </div>
+            <div class="input-group">
+                <label for="jobDescription">Job Description:</label>
+                <textarea id="jobDescription" rows="5" placeholder="Paste the job description here..."></textarea>
+            </div>
+            <button onclick="uploadContext()">Set Context</button>
+        </div>
+
+        <div class="chat-section">
+            <div class="form-group">
+                <label for="question">Interview Question:</label>
+                <textarea id="question" placeholder="Enter interview question"></textarea>
+            </div>
+            <button onclick="sendQuestion()">Ask Question</button>
+            <div id="response"></div>
+        </div>
+
+        <div class="introduction-section">
+            <h2>Introduction Generator</h2>
+            <button onclick="generateIntroduction()">Generate Introduction</button>
+            <div id="introduction" class="response-area"></div>
+        </div>
+    </div>
+
+    <script>
+        let isRecording = false;
+
+        async function uploadContext() {
+        try {
+            const resume = document.getElementById('resume').value;
+            const jobDescription = document.getElementById('jobDescription').value;
+            
+            console.log('Uploading context...');
+            
+            const response = await fetch('http://localhost:5000/upload_context', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify({
+                    resume: resume,
+                    jobDescription: jobDescription
+                })
+            });
+            
+            const data = await response.json();
+            console.log('Context uploaded:', data);
+            alert('Context saved successfully!');
+        } catch (error) {
+            console.error('Error:', error);
+            alert('Error saving context: ' + error.message);
+        }
+    }
+
+    async function sendQuestion() {
+        try {
+            const question = document.getElementById('question').value;
+            console.log('Sending question:', question);
+            
+            const response = await fetch('http://localhost:5000/generate_response', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify({ question: question })
+            });
+            
+            const data = await response.json();
+            console.log('Received response:', data);
+            
+            document.getElementById('response').textContent = data.response;
+        } catch (error) {
+            console.error('Error:', error);
+            document.getElementById('response').textContent = 'Error: ' + error.message;
+        }
+    }
+
+        async function generateIntroduction() {
+            const introDiv = document.getElementById('introduction');
+            
+            try {
+                const response = await fetch('/generate_introduction', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                const data = await response.json();
+                introDiv.innerHTML = data.introduction;
+            } catch (error) {
+                console.error('Error:', error);
+                introDiv.innerHTML = 'Failed to generate introduction';
+            }
+        }
+
+        function toggleRecording() {
+            const recordBtn = document.getElementById('recordBtn');
+            isRecording = !isRecording;
+            
+            if (isRecording) {
+                recordBtn.textContent = '⏹️ Stop';
+                // Start recording logic here
+            } else {
+                recordBtn.textContent = '🎤 Record';
+                // Stop recording logic here
+            }
+        }
+    </script>
+</body>
+</html>
